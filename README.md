@@ -11,7 +11,7 @@ Full-stack skeleton for Django + Strawberry GraphQL + Django Channels + Celery +
 | `docs/03-realtime-channels.md` | Django Channels ASGI routing, WebSocket subscriptions, Redis pub/sub pattern |
 | `docs/04-celery-workers.md` | Celery config, Beat scheduler, periodic task registration, Docker service split |
 | `docs/05-frontend.md` | Next.js 16 App Router, Apollo Client 4, MUI v9, codegen workflow, email pattern |
-| `docs/06-deployment.md` | Docker Compose layout, Terraform AWS, GitHub Actions CI/CD, Vercel deployment |
+| `docs/06-deployment.md` | Docker Compose layout, Terraform AWS, GitHub Actions CI/CD, Vercel deployment, local ops scripts |
 
 ## Sample code
 
@@ -43,6 +43,13 @@ Full-stack skeleton for Django + Strawberry GraphQL + Django Channels + Celery +
 | `sample/infra/.docker/production/api/Dockerfile` | Production API image (multi-stage, non-root) |
 | `sample/infra/terraform/main.tf` | Terraform AWS provider, VPC, EC2, EIP, S3, IAM (flat stack) |
 | `sample/infra/.github-workflows/deploy.yml` | Build API image → push to GHCR → SSH deploy to EC2 |
+| `sample/scripts/_common.sh` | Shared bootstrap — resolves EC2_HOST (env → Terraform output) and SSH key |
+| `sample/scripts/.scripts.env.example` | Template for EC2_HOST + EC2_SSH_KEY on a new machine |
+| `sample/scripts/connect.sh` | Open an interactive SSH shell on the EC2 instance |
+| `sample/scripts/deploy.sh` | Manual deploy: git pull + docker compose up (mirrors CI workflow) |
+| `sample/scripts/logs.sh` | Stream or dump service logs — supports `--tail N` and `--no-follow` |
+| `sample/scripts/db.sh` | DB access: `psql`, `tunnel` (GUI tools), `dump`, `restore`, `query` |
+| `sample/scripts/graphql-sync.sh` | Export GraphQL schema from Django + regenerate frontend types |
 
 ## Quick start
 

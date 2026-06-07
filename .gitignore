@@ -178,5 +178,8 @@ ehthumbs.db
 # Deployment SSH key config (ad-hoc scripts, known_hosts overrides, etc.)
 .deploy/
 
+# Local ops script config — contains EC2_HOST and EC2_SSH_KEY (never commit)
+scripts/.scripts.env
+
 # Database backups
 db_backup/

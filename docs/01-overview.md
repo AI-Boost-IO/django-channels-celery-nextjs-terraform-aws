@@ -101,9 +101,13 @@ v1-mono/
 │       ├── ci.yml              # Type-check, lint, commitlint on PR
 │       └── deploy.yml          # Build + push GHCR image → SSH deploy on push to main
 └── scripts/
-    ├── deploy.sh               # Runs docker compose pull + up on EC2 via SSH
-    ├── graphql-sync.sh         # Exports schema from Django → copies to ui/ for codegen
-    └── connect.sh              # Opens an SSH tunnel to the EC2 instance
+    ├── _common.sh              # Sourced by all SSH scripts — resolves host + key
+    ├── .scripts.env.example    # Template: copy to .scripts.env and fill in EC2_HOST + key
+    ├── connect.sh              # Interactive SSH shell on EC2
+    ├── deploy.sh               # Manual deploy: git pull + compose up (mirrors CI)
+    ├── logs.sh                 # Stream/dump service logs with --tail and --no-follow
+    ├── db.sh                   # DB access: psql, tunnel, dump, restore, query
+    └── graphql-sync.sh         # Export schema from Django → codegen in ui/
 ```
 
 ## Shared conventions

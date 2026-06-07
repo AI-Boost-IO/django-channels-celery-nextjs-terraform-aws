@@ -223,6 +223,144 @@ jobs:
 
 Vercel deploys automatically from the same push — no additional step is needed.
 
+## Local ops scripts
+
+The `scripts/` directory contains six shell scripts for day-to-day operations. All SSH-dependent scripts share a common resolution layer (`scripts/_common.sh`) that determines the EC2 host and SSH key automatically.
+
+### Configuration: `scripts/.scripts.env`
+
+Copy the example file and fill in two values:
+
+```bash
+cp scripts/.scripts.env.example scripts/.scripts.env
+```
+
+```bash
+# scripts/.scripts.env  (gitignored — never commit)
+EC2_HOST=<elastic-ip>
+EC2_SSH_KEY=~/.ssh/myproject-ec2
+```
+
+`scripts/.scripts.env` is loaded automatically by every script. Environment variables of the same name take precedence if set in the shell.
+
+### Host and key resolution order
+
+Each SSH script resolves `EC2_HOST` and `EC2_SSH_KEY` using this priority chain:
+
+| Priority | `EC2_HOST` | `EC2_SSH_KEY` |
+|----------|-----------|--------------|
+| 1 | `EC2_HOST` env var or `.scripts.env` | `EC2_SSH_KEY` env var or `.scripts.env` |
+| 2 | `terraform output -raw ec2_public_ip` (requires `.terraform/` to be initialised and AWS credentials active) | `~/.ssh/<repo-name>-ec2` (project-scoped key) |
+| 3 | Hard error with actionable message | `~/.ssh/id_rsa` (fallback) |
+
+### Script reference
+
+```bash
+# Interactive SSH shell
+./scripts/connect.sh
+
+# Manual deploy (mirrors deploy.yml — use for hotfixes or pre-CI bootstrap)
+./scripts/deploy.sh
+
+# Logs — stream or dump service output
+./scripts/logs.sh                        # All services, last 100 lines + follow
+./scripts/logs.sh api                    # api service only
+./scripts/logs.sh api-worker             # Celery worker
+./scripts/logs.sh traefik --tail 500     # Last 500 lines of Traefik, then follow
+./scripts/logs.sh api --no-follow        # Dump last 100 lines, exit immediately
+
+# Database access
+./scripts/db.sh psql                     # Interactive psql shell (via docker exec)
+./scripts/db.sh tunnel                   # localhost:15432 → db container (for GUI tools)
+./scripts/db.sh dump                     # Stream pg_dump to db-YYYYMMDD-HHMMSS.dump
+./scripts/db.sh dump ./backups/pre-migration.dump
+./scripts/db.sh restore ./backups/pre-migration.dump
+./scripts/db.sh query "SELECT count(*) FROM auth_user;"
+
+# Schema export + frontend codegen
+./scripts/graphql-sync.sh               # Export schema + run bun codegen
+EXPORT_ONLY=true ./scripts/graphql-sync.sh   # Export only, skip codegen
+```
+
+### Database tunnel — how it works
+
+Port 5432 is not exposed on the EC2 host (security group blocks it). `db.sh tunnel` uses a two-step approach that requires no changes to the container or compose file:
+
+1. Inspect the running `db` container to find its IP on the Docker bridge network (`docker inspect`)
+2. Open an SSH local port forward: `localhost:15432 → <container_ip>:5432`
+
+The EC2 host can reach container IPs directly via Docker's routing table, so the tunnel works without socat or any extra services.
+
+```bash
+./scripts/db.sh tunnel
+# Then connect TablePlus / DBeaver / pgAdmin to:
+#   host=localhost  port=15432  user=$POSTGRES_USER  database=$POSTGRES_DB
+```
+
+Override the local port if 15432 is in use:
+
+```bash
+LOCAL_PORT=5555 ./scripts/db.sh tunnel
+```
+
+### `pg_dump` / `pg_restore` — no temp files on server
+
+`db.sh dump` and `db.sh restore` stream the dump directly through the SSH connection — no file is written to the EC2 instance:
+
+```
+dump:    container stdout → SSH stdout → local file
+restore: local file → SSH stdin → container stdin → pg_restore
+```
+
+This means dumps work even when `/tmp` is full and avoids leaving sensitive data on the server.
+
+### New machine — getting credentials
+
+A new team member or CI runner needs two things:
+
+**1. EC2_HOST** (the Elastic IP):
+
+```bash
+# From Terraform output (fastest, if the caller has AWS credentials):
+cd .terraform && terraform output ec2_public_ip
+
+# From the AWS CLI:
+aws ec2 describe-addresses \
+  --query "Addresses[?Tags[?Key=='Project' && Value=='myproject']].PublicIp" \
+  --output text
+
+# From the GitHub Actions secret EC2_HOST (set when CI was configured).
+```
+
+**2. The SSH private key**:
+
+The private key was generated locally before `terraform apply` — the public key was passed as `var.ssh_public_key`. The private key is never stored in the repository or in AWS.
+
+Retrieve it from wherever your team stores secrets:
+
+```bash
+# Option A — password manager (1Password, Bitwarden, etc.)
+# Export the key as a file and save to ~/.ssh/myproject-ec2
+chmod 600 ~/.ssh/myproject-ec2
+
+# Option B — AWS Secrets Manager:
+aws secretsmanager get-secret-value \
+  --secret-id myproject/ec2-ssh-key \
+  --query SecretString --output text \
+  > ~/.ssh/myproject-ec2
+chmod 600 ~/.ssh/myproject-ec2
+
+# Option C — AWS SSM Parameter Store:
+aws ssm get-parameter \
+  --name /myproject/ec2-ssh-key \
+  --with-decryption \
+  --query Parameter.Value --output text \
+  > ~/.ssh/myproject-ec2
+chmod 600 ~/.ssh/myproject-ec2
+```
+
+Once the key is in place, set both values in `scripts/.scripts.env` and all scripts work without further configuration.
+
 ## Django production settings for Vercel CORS
 
 ```python
