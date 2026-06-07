@@ -156,7 +156,13 @@ ehthumbs.db
 # IDE
 # ===========================================================================
 
-.vscode/
+# VS Code — ignore user-specific files but track shared team settings.
+# settings.json and extensions.json are committed so every developer gets
+# the same formatter (Ruff + Biome) and extension recommendations on first open.
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+
 .idea/
 *.swp
 *.swo

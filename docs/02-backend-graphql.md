@@ -207,6 +207,42 @@ async def my_query(self, info: Info) -> MyType:
     ...
 ```
 
+## Formatting and linting
+
+Ruff replaces Black, Flake8, and isort with a single Rust-based tool configured in `api/pyproject.toml`.
+
+```toml
+# api/pyproject.toml
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # Pyflakes — undefined names, unused imports
+    "I",   # isort — import ordering
+    "B",   # flake8-bugbear — likely bugs and design problems
+    "UP",  # pyupgrade — modernise syntax for the target Python version
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
+```
+
+**Common commands (run from `api/`):**
+
+```bash
+uv run ruff format .          # Format all Python files
+uv run ruff check .           # Lint — report only
+uv run ruff check --fix .     # Lint + apply auto-fixes
+```
+
+The VS Code Ruff extension (`charliermarsh.ruff`) reads `[tool.ruff]` directly from `pyproject.toml` and applies format-on-save and inline lint diagnostics automatically — no separate editor config needed. Install it via `.vscode/extensions.json` recommendations.
+
 ## Schema export + codegen
 
 After changing the schema, run the export and regenerate types:

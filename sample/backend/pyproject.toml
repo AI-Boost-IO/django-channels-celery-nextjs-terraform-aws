@@ -1,0 +1,74 @@
+# pyproject.toml — uv project manifest for the Django API
+#
+# Usage:
+#   uv sync                  # Install all dependencies (creates/updates .venv)
+#   uv sync --group dev      # Include dev dependencies (ruff)
+#   uv add <package>         # Add a runtime dependency
+#   uv add --dev <package>   # Add a dev-only dependency
+#   uv run python manage.py  # Run any Django management command
+#
+# Formatting + linting:
+#   uv run ruff format .         # Format all Python files
+#   uv run ruff check .          # Lint (report only)
+#   uv run ruff check --fix .    # Lint + apply auto-fixes
+#
+# Replace "myproject" with your actual project name throughout.
+
+[project]
+name = "myproject"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    # ASGI server + WebSocket support
+    "channels[daphne]>=4.3.2",
+    "channels-redis>=4.2",
+    # Django core
+    "django>=5.2,<5.3",
+    "django-cors-headers>=4.0",
+    "django-storages[s3]>=1.14",
+    "whitenoise>=6.0",
+    # GraphQL
+    "strawberry-graphql[django]>=0.316.0",
+    "strawberry-graphql-django>=0.86.0",
+    # Celery + scheduler
+    "celery>=5.6.3",
+    "django-celery-beat>=2.9.0",
+    # Database
+    "psycopg2-binary>=2.9",
+    "pgvector>=0.3",
+    "redis>=5.0",
+    # HTTP client — used by the email cross-stack pattern and external API calls
+    "httpx>=0.28",
+    # LLM clients — tasks degrade gracefully if API keys are unset
+    "openai>=1.0",
+    "anthropic>=0.40",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.0",
+]
+
+# ---------------------------------------------------------------------------
+# Ruff — formatter + linter (replaces Black, Flake8, and isort in one tool)
+# Docs: https://docs.astral.sh/ruff
+# ---------------------------------------------------------------------------
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # Pyflakes — undefined names, unused imports
+    "I",   # isort — import ordering
+    "B",   # flake8-bugbear — likely bugs and design problems
+    "UP",  # pyupgrade — modernise syntax for the target Python version
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true

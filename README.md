@@ -17,6 +17,7 @@ Full-stack skeleton for Django + Strawberry GraphQL + Django Channels + Celery +
 
 | File | Description |
 |------|-------------|
+| `sample/backend/pyproject.toml` | uv project manifest — Django dependencies + Ruff formatter/linter config |
 | `sample/backend/config/asgi.py` | ASGI routing — `GraphQLProtocolTypeRouter` + auth-aware production variant |
 | `sample/backend/config/celery.py` | Celery app with Redis broker, result backend, task autodiscovery |
 | `sample/backend/config/settings/common.py` | Shared Django settings — INSTALLED_APPS, CHANNEL_LAYERS, CELERY_* |
@@ -30,9 +31,12 @@ Full-stack skeleton for Django + Strawberry GraphQL + Django Channels + Celery +
 | `sample/logic/mutations/example.py` | Example mutation with input type |
 | `sample/logic/subscriptions/example.py` | Async generator subscription reading from channel layer |
 | `sample/logic/tasks/example.py` | Celery task with pub/sub + periodic task management command |
+| `sample/frontend/biome.json` | Biome v2 config — formatter (single quotes, 100-char lines), linter, import organiser |
 | `sample/frontend/lib/apollo-client.ts` | Apollo Client 4 with HTTP + WebSocket split link for Next.js 16 |
 | `sample/frontend/components/ThemeRegistry.tsx` | MUI v9 ThemeProvider wired for Next.js App Router SSR |
 | `sample/frontend/codegen.ts` | GraphQL codegen config pointing at the Django-exported schema |
+| `sample/infra/.vscode/settings.json` | VS Code format-on-save settings — Ruff for Python, Biome for TypeScript |
+| `sample/infra/.vscode/extensions.json` | VS Code extension recommendations — ms-python, charliermarsh.ruff, biomejs.biome |
 | `sample/infra/.docker/development/docker-compose.yaml` | Development services with hot-reload source mounts |
 | `sample/infra/.docker/production/docker-compose.yaml` | Production services — API on EC2, no ui service (Vercel handles it) |
 | `sample/infra/.docker/development/api/Dockerfile` | Development API image (Python 3.12 + uv) |
@@ -46,27 +50,37 @@ Full-stack skeleton for Django + Strawberry GraphQL + Django Channels + Celery +
 
 2. **Copy `sample/logic/`** alongside `api/` as your resolver and task layer.
 
-3. **Verify `INSTALLED_APPS`** — `daphne` must be first, followed by `channels`, `strawberry_django`, `django_celery_beat`, `corsheaders`.
+3. **Set up Python dependencies and formatting.** Copy `sample/backend/pyproject.toml` to `api/`, update the `name` field, then:
+   ```bash
+   uv sync --group dev
+   ```
+   This installs all Django dependencies and Ruff (formatter + linter) into `api/.venv`.
 
-4. **Copy `sample/frontend/`** into your Next.js `ui/` app and install dependencies:
+4. **Verify `INSTALLED_APPS`** — `daphne` must be first, followed by `channels`, `strawberry_django`, `django_celery_beat`, `corsheaders`.
+
+5. **Copy `sample/frontend/`** into your Next.js `ui/` app and install dependencies:
    ```bash
    bun add @apollo/client @apollo/client-integration-nextjs graphql graphql-ws rxjs
    bun add @mui/material @mui/material-nextjs @emotion/react @emotion/styled
+   bun add --dev --save-exact @biomejs/biome
    ```
+   The last line installs Biome locally — required for the VS Code extension LSP and for `bunx biome` CI commands.
 
-5. **Copy `sample/infra/.docker/`** to `.docker/` in your monorepo root. Populate `.docker/development/api/.env` from the Key env vars table below.
+6. **Set up VS Code formatting.** Copy `sample/infra/.vscode/` to `.vscode/` in your monorepo root, then open the project in VS Code. You will be prompted to install the recommended extensions (`charliermarsh.ruff` and `biomejs.biome`). Format-on-save activates immediately after installation.
 
-6. **Start the dev environment:**
+7. **Copy `sample/infra/.docker/`** to `.docker/` in your monorepo root. Populate `.docker/development/api/.env` from the Key env vars table below.
+
+8. **Start the dev environment:**
    ```bash
    docker compose -f .docker/development/docker-compose.yaml up
    ```
 
-7. **Copy `sample/infra/terraform/`** to `.terraform/`. Edit the `locals` block in `main.tf`, then:
+9. **Copy `sample/infra/terraform/`** to `.terraform/`. Edit the `locals` block in `main.tf`, then:
    ```bash
    terraform init && terraform plan && terraform apply
    ```
 
-8. **Connect Vercel** to your repo's `ui/` directory via the Vercel dashboard. Set `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_WS_URL`, and `SSR_API_URL` as environment variables in Vercel — these are not in `vercel.json`.
+10. **Connect Vercel** to your repo's `ui/` directory via the Vercel dashboard. Set `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_WS_URL`, and `SSR_API_URL` as environment variables in Vercel — these are not in `vercel.json`.
 
 ## Key env vars
 

@@ -55,6 +55,7 @@ graph TD
 ```
 v1-mono/
 ├── api/                        # Django backend — Python, managed with uv
+│   ├── pyproject.toml          # uv project manifest + Ruff formatter/linter config
 │   ├── config/                 # Django project package (settings, asgi, celery, urls)
 │   ├── apps/                   # Domain Django apps — models, admin, migrations ONLY
 │   │   ├── authentication/
@@ -69,6 +70,7 @@ v1-mono/
 │   ├── base/                   # BaseModel, BaseType, shared abstractions
 │   └── utilities/              # S3 client, LLM client, email sender
 ├── ui/                         # Next.js frontend — TypeScript, Bun
+│   ├── biome.json              # Biome v2 formatter + linter config
 │   └── src/
 │       ├── app/                # App Router: route groups, pages, layouts
 │       │   ├── (auth)/         # Login, register, password reset
@@ -79,6 +81,9 @@ v1-mono/
 │       ├── components/         # Shared React components
 │       ├── emails/             # React Email templates
 │       └── __generated__/      # Output of graphql-codegen (committed)
+├── .vscode/
+│   ├── settings.json           # Format-on-save: Ruff (Python), Biome (TS/JS/JSON)
+│   └── extensions.json         # Recommends ms-python, charliermarsh.ruff, biomejs.biome
 ├── .docker/
 │   ├── development/
 │   │   ├── docker-compose.yaml
@@ -106,6 +111,7 @@ v1-mono/
 | Convention | Pattern |
 |------------|---------|
 | **apps/ vs logic/** | `apps/` contains only models, admin, and migrations. All business logic, resolvers, and Celery tasks live in `logic/` — imports flow one-way (logic → apps, never apps → logic) |
+| **Formatting** | Python: Ruff (`uv run ruff format . && uv run ruff check --fix .`) configured in `api/pyproject.toml`. TypeScript: Biome (`bunx biome check --apply .`) configured in `ui/biome.json`. Both apply automatically on save via `.vscode/settings.json` |
 | **BaseModel** | Every domain model inherits `BaseModel`: UUID PK, `date_created`, `date_updated`, `date_deleted` (soft delete), `version` (optimistic concurrency) |
 | **Schema export** | `python manage.py export_schema` writes `api/graphql/schema.graphql`; `scripts/graphql-sync.sh` copies it to `ui/` so `graphql-codegen` can run against it without a live server |
 | **Codegen gate** | `tsc --noEmit` is blocked on codegen output — if the schema changes, types regenerate and compilation catches any frontend type errors |
@@ -127,6 +133,8 @@ v1-mono/
 | django-celery-beat | 2.9.0 |
 | uv | 0.11.19 |
 | Bun | latest |
+| Ruff | 0.15.x |
+| Biome | 2.4.x |
 | Next.js | 16 |
 | React | 19.2 |
 | @apollo/client | 4.2.2 |

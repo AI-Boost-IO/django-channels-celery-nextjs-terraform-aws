@@ -128,6 +128,37 @@ import Grid from "@mui/material/Grid";
 </Grid>
 ```
 
+## Formatting and linting
+
+Biome v2 replaces Prettier and ESLint with a single Rust-based tool. The config lives at `ui/biome.json`.
+
+```json
+// ui/biome.json — see sample/frontend/biome.json
+```
+
+Key choices:
+
+| Setting | Value | Rationale |
+|---------|-------|-----------|
+| `formatter.indentStyle` | `"space"` | Matches TypeScript community convention |
+| `formatter.lineWidth` | `100` | Slightly wider than Prettier's 80 for modern screens |
+| `javascript.formatter.quoteStyle` | `"single"` | Consistent with Next.js/React convention |
+| `javascript.formatter.trailingCommas` | `"es5"` | Trailing commas in objects/arrays, not function params |
+| `vcs.useIgnoreFile` | `true` | Biome respects `.gitignore` — `node_modules/`, `.next/`, `__generated__/` are skipped automatically |
+| `assist.actions.source.recommended` | `true` | Enables auto-fix import organisation on save |
+
+**Common commands (run from `ui/`):**
+
+```bash
+bunx biome check .              # Lint + format check (CI)
+bunx biome check --apply .      # Lint + format, apply safe fixes
+bunx biome format --write .     # Format only
+```
+
+The VS Code Biome extension (`biomejs.biome`) reads `ui/biome.json` automatically when the workspace root contains the file, and applies format-on-save and inline lint diagnostics. Install it via `.vscode/extensions.json` recommendations.
+
+> **Note on `@biomejs/biome` dev dependency:** Install Biome locally with `bun add --dev --save-exact @biomejs/biome` so the VS Code extension uses the same version as CI. The `--save-exact` flag pins to a specific version, preventing unexpected formatting diffs when Biome releases a new minor version.
+
 ## GraphQL codegen workflow
 
 ```typescript
