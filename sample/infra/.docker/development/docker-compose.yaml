@@ -1,0 +1,145 @@
+# Development Docker Compose
+#
+# Starts all backend services with hot-reload source mounts.
+# The `ui` service runs the Next.js dev server for local convenience —
+# in production, Next.js is deployed to Vercel and this service is removed.
+#
+# Usage:
+#   docker compose -f .docker/development/docker-compose.yaml up
+#
+# The `api`, `api-beat`, and `api-worker` services share the same image.
+# They differ only in their entrypoint script — see each service's `command`.
+#
+# Environment variables are loaded from .docker/development/api/.env
+# Copy .docker/development/api/.env.example to .env and fill in the values.
+
+name: myproject-dev
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Database
+  # ---------------------------------------------------------------------------
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-myproject}
+      POSTGRES_USER: ${POSTGRES_USER:-myproject}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-myproject}
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-myproject}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # Cache — Redis for Celery broker, results, and channel layer
+  # ---------------------------------------------------------------------------
+  cache:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - cache-data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # API — Django + Daphne (HTTP + WebSocket)
+  # ---------------------------------------------------------------------------
+  api:
+    build:
+      context: ../../../../api        # Django project root
+      dockerfile: ../../../.docker/development/api/Dockerfile
+    image: myproject-api-dev
+    restart: unless-stopped
+    volumes:
+      # Source mount: changes in api/ are reflected immediately (no rebuild needed).
+      - ../../../../api:/app
+    env_file:
+      - ./api/.env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.development
+    ports:
+      - "8000:8000"
+    command: /entrypoint.sh
+    depends_on:
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # Beat — Celery Beat periodic task scheduler
+  # Reuses the api image — only the entrypoint differs.
+  # ---------------------------------------------------------------------------
+  api-beat:
+    image: myproject-api-dev          # Same image as `api` — built above
+    restart: unless-stopped
+    volumes:
+      - ../../../../api:/app
+    env_file:
+      - ./api/.env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.development
+    command: /entrypoint-beat.sh
+    depends_on:
+      - api
+      - cache
+
+  # ---------------------------------------------------------------------------
+  # Worker — Celery background task worker
+  # Reuses the api image — only the entrypoint differs.
+  # ---------------------------------------------------------------------------
+  api-worker:
+    image: myproject-api-dev
+    restart: unless-stopped
+    volumes:
+      - ../../../../api:/app
+    env_file:
+      - ./api/.env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.development
+    command: /entrypoint-worker.sh
+    depends_on:
+      - api
+      - cache
+
+  # ---------------------------------------------------------------------------
+  # UI — Next.js dev server (local convenience only — not in production compose)
+  # In production, Next.js is deployed to Vercel automatically via git push.
+  # ---------------------------------------------------------------------------
+  ui:
+    image: node:22-alpine
+    working_dir: /app
+    volumes:
+      - ../../../../ui:/app
+      - ui-node-modules:/app/node_modules
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_WS_URL: ws://localhost:8000
+      # SSR_API_URL uses the internal Docker hostname so Next.js server-side
+      # requests reach the api container directly without going through localhost.
+      SSR_API_URL: http://api:8000
+    ports:
+      - "3000:3000"
+    command: sh -c "npm install && npm run dev"
+    depends_on:
+      - api
+
+# ---------------------------------------------------------------------------
+# Named volumes
+# ---------------------------------------------------------------------------
+volumes:
+  db-data:
+  cache-data:
+  ui-node-modules:

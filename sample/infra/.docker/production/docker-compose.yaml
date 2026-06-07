@@ -1,0 +1,162 @@
+# Production Docker Compose
+#
+# Deployed on a single EC2 instance behind Traefik.
+# Images are pulled from GHCR — built and pushed by .github/workflows/deploy.yml.
+#
+# Key differences from development:
+#   - NO `ui` service: Next.js is deployed to Vercel, not Docker.
+#   - Named volumes for persistent DB and cache data.
+#   - Traefik for TLS termination and routing.
+#   - Images from GHCR (pre-built), not built locally.
+#   - DJANGO_SETTINGS_MODULE=config.settings.production
+#
+# Usage (automated by deploy.yml — run manually only for debugging):
+#   docker compose -f .docker/production/docker-compose.yaml pull
+#   docker compose -f .docker/production/docker-compose.yaml up -d --remove-orphans
+#
+# Environment variables are set as system environment variables on the EC2 instance.
+# Do NOT commit a .env file for production — use EC2 instance metadata or
+# AWS Secrets Manager instead.
+
+name: myproject-prod
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Database
+  # ---------------------------------------------------------------------------
+  db:
+    image: pgvector/pgvector:pg16
+    restart: always
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    # Do NOT expose port 5432 externally in production.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # Cache
+  # ---------------------------------------------------------------------------
+  cache:
+    image: redis:7-alpine
+    restart: always
+    volumes:
+      - cache-data:/data
+    command: redis-server --appendonly yes   # Persist data across restarts
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # API — Django + Daphne
+  # ---------------------------------------------------------------------------
+  api:
+    image: ghcr.io/myorg/v1-mono-api:latest
+    restart: always
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      SECRET_KEY: ${SECRET_KEY}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      CACHE_URL: cache
+      DOMAIN: ${DOMAIN}
+      VERCEL_DOMAIN: ${VERCEL_DOMAIN}
+      ALLOWED_HOSTS: ${DOMAIN},api
+      AWS_S3_BUCKET_NAME: ${AWS_S3_BUCKET_NAME}
+      AWS_S3_REGION_NAME: ${AWS_S3_REGION_NAME}
+    command: /entrypoint.sh
+    depends_on:
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_healthy
+    labels:
+      # Traefik routing: requests to api.${DOMAIN} are forwarded to port 8000
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=Host(`api.${DOMAIN}`)"
+      - "traefik.http.routers.api.entrypoints=websecure"
+      - "traefik.http.routers.api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.api.loadbalancer.server.port=8000"
+
+  # ---------------------------------------------------------------------------
+  # Beat — Celery Beat scheduler
+  # ---------------------------------------------------------------------------
+  api-beat:
+    image: ghcr.io/myorg/v1-mono-api:latest
+    restart: always
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      SECRET_KEY: ${SECRET_KEY}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST: db
+      CACHE_URL: cache
+    command: /entrypoint-beat.sh
+    depends_on:
+      - api
+      - cache
+
+  # ---------------------------------------------------------------------------
+  # Worker — Celery task worker
+  # ---------------------------------------------------------------------------
+  api-worker:
+    image: ghcr.io/myorg/v1-mono-api:latest
+    restart: always
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      SECRET_KEY: ${SECRET_KEY}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST: db
+      CACHE_URL: cache
+      AWS_S3_BUCKET_NAME: ${AWS_S3_BUCKET_NAME}
+      AWS_S3_REGION_NAME: ${AWS_S3_REGION_NAME}
+    command: /entrypoint-worker.sh
+    depends_on:
+      - api
+      - cache
+
+  # ---------------------------------------------------------------------------
+  # Traefik — TLS termination and reverse proxy
+  # ---------------------------------------------------------------------------
+  traefik:
+    image: traefik:v3.1
+    restart: always
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - letsencrypt-data:/letsencrypt
+
+# ---------------------------------------------------------------------------
+# Named volumes — persist across container restarts and image updates
+# ---------------------------------------------------------------------------
+volumes:
+  db-data:
+  cache-data:
+  letsencrypt-data:

@@ -1,0 +1,84 @@
+# CI workflow — runs on every pull request.
+#
+# Jobs:
+#   typecheck    — exports GraphQL schema (mocked), runs codegen, then tsc --noEmit
+#   lint         — Biome linter + formatter check on the ui/ directory
+#   commitlint   — validates commit message format against commitlint rules
+#
+# The schema export is mocked by reading the committed schema.graphql file —
+# no running Django server is needed in CI.
+#
+# Copy this file to .github/workflows/ci.yml in your monorepo.
+
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+
+  # ---------------------------------------------------------------------------
+  # Type-check: codegen + tsc
+  # ---------------------------------------------------------------------------
+  typecheck:
+    name: TypeScript type-check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install ui dependencies
+        run: bun install
+        working-directory: ui
+
+      # schema.graphql is already committed — no running API needed.
+      # If you change the schema, the codegen step below will regenerate types
+      # and tsc will catch any mismatches.
+      - name: Run GraphQL codegen
+        run: bun run codegen
+        working-directory: ui
+
+      - name: TypeScript type-check
+        run: bun run typecheck
+        working-directory: ui
+
+  # ---------------------------------------------------------------------------
+  # Lint: Biome
+  # ---------------------------------------------------------------------------
+  lint:
+    name: Biome lint + format check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install ui dependencies
+        run: bun install
+        working-directory: ui
+
+      - name: Biome check
+        run: bunx biome check --reporter=github .
+        working-directory: ui
+
+  # ---------------------------------------------------------------------------
+  # Commitlint
+  # ---------------------------------------------------------------------------
+  commitlint:
+    name: Commit message lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # commitlint needs the full history to compare branches
+
+      - uses: wagoid/commitlint-github-action@v6
+        with:
+          configFile: ui/commitlint.config.ts
