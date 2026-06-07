@@ -126,7 +126,7 @@ v1-mono/
 | celery | 5.6.3 |
 | django-celery-beat | 2.9.0 |
 | uv | 0.11.19 |
-| Node.js / Bun | 22 LTS / latest |
+| Bun | latest |
 | Next.js | 16 |
 | React | 19.2 |
 | @apollo/client | 4.2.2 |

@@ -82,10 +82,8 @@ bun.lockb
 coverage/
 
 # Debug logs
-npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
 
 # ===========================================================================
 # Environment / secrets
@@ -116,7 +114,7 @@ yarn-error.log*
 
 # .terraform.lock.hcl is intentionally NOT listed here.
 # It must be committed — it pins provider versions the same way
-# package-lock.json pins npm packages.
+# bun.lock pins bun packages.
 
 # Variable files often contain secrets (API keys, passwords, IPs)
 **/*.tfvars

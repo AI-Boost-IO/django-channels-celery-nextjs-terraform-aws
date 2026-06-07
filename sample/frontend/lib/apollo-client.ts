@@ -12,7 +12,7 @@
  *   - query/mutation → HttpLink (standard fetch)
  *
  * Required peer dependencies (install explicitly — not bundled by Apollo):
- *   npm install graphql-ws rxjs
+ *   bun add graphql-ws rxjs
  *
  * Environment variables (set in Vercel dashboard, not vercel.json):
  *   NEXT_PUBLIC_API_URL  — browser-facing HTTP API base URL

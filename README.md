@@ -50,8 +50,8 @@ Full-stack skeleton for Django + Strawberry GraphQL + Django Channels + Celery +
 
 4. **Copy `sample/frontend/`** into your Next.js `ui/` app and install dependencies:
    ```bash
-   npm install @apollo/client @apollo/client-integration-nextjs graphql graphql-ws rxjs
-   npm install @mui/material @mui/material-nextjs @emotion/react @emotion/styled
+   bun add @apollo/client @apollo/client-integration-nextjs graphql graphql-ws rxjs
+   bun add @mui/material @mui/material-nextjs @emotion/react @emotion/styled
    ```
 
 5. **Copy `sample/infra/.docker/`** to `.docker/` in your monorepo root. Populate `.docker/development/api/.env` from the Key env vars table below.
