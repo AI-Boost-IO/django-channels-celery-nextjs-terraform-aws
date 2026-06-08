@@ -28,6 +28,10 @@ app = Celery("myproject")
 # Using a namespace keeps Celery settings clearly separated from Django settings.
 app.config_from_object("django.conf:settings", namespace="CELERY")
 
-# Autodiscover tasks from the logic/tasks/ directory rather than from Django apps.
-# This enforces the separation: apps/ owns models, logic/ owns tasks.
-app.autodiscover_tasks(["logic.tasks"])
+# Autodiscover tasks from the logic/ package.
+# autodiscover_tasks(["logic"]) imports logic.tasks, which in turn imports
+# all task submodules via logic/tasks/__init__.py.
+#
+# Do NOT pass "logic.tasks" here — that tells Celery to look for
+# logic.tasks.tasks (a file that doesn't exist) and discovers nothing.
+app.autodiscover_tasks(["logic"])

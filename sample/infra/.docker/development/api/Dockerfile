@@ -7,35 +7,45 @@
 # The Dockerfile only installs dependencies; source code is NOT COPY'd —
 # it is provided at runtime via the volume mount in docker-compose.yaml.
 #
-# Install Python dependencies with uv for speed.
-# uv 0.11.19 is pinned for reproducibility.
+# IMPORTANT — venv location:
+#   UV_PROJECT_ENVIRONMENT is set to /venv (outside /app).
+#   This prevents the venv from being hidden by the `volumes` source mount
+#   (../../../../api:/app) that Docker Compose applies at runtime.
+#   If the venv were at /app/.venv (the uv default), the mount would shadow it
+#   and every entrypoint would fail with "ModuleNotFoundError: No module named django".
 
 FROM python:3.12-slim AS base
 
-# Prevent .pyc files and enable unbuffered stdout/stderr for clean Docker logs
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    # Place uv-managed binaries on PATH
-    PATH="/root/.local/bin:$PATH"
+    # Store the venv outside the source mount so it survives the volume overlay.
+    UV_PROJECT_ENVIRONMENT=/venv \
+    # /venv/bin first so the venv Python is used by bare `python` / `celery` / `daphne`.
+    PATH="/venv/bin:$PATH"
 
 WORKDIR /app
 
-# Install system dependencies required by psycopg2 and Pillow
+# System dependencies:
+#   build-essential + libpq-dev  — compile psycopg2 C extension
+#   curl                         — used by health check scripts (curl -f http://localhost:8000/health/)
+#                                  Do NOT remove curl when switching to COPY --from=uv;
+#                                  health checks fail without it.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
     curl \
   && rm -rf /var/lib/apt/lists/*
 
-# Install uv — fast Python package manager that replaces pip in this project
-RUN curl -LsSf https://astral.sh/uv/0.11.19/install.sh | sh
+# Install uv from the official distroless image — no curl pipe-to-shell needed.
+# Pin the version here to match any uv-specific features used in pyproject.toml.
+COPY --from=ghcr.io/astral-sh/uv:0.11.19 /uv /usr/local/bin/uv
 
 # Copy only the dependency manifest first so Docker can cache this layer.
 # The source is mounted at runtime, so we skip COPY . .
 COPY pyproject.toml uv.lock* ./
 
-# Install all dependencies (including dev extras) from the lock file.
-# --no-install-project: installs deps only, not the project itself (no src layout needed).
+# Install all dependencies (including dev extras) into /venv.
+# --no-install-project: installs deps only, not the project package itself.
 RUN uv sync --frozen --no-install-project
 
 # Copy entrypoint scripts for all three service roles.

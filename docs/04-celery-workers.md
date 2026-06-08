@@ -14,8 +14,11 @@ app = Celery("myproject")
 # Read Celery config from Django settings — all keys prefixed with CELERY_
 app.config_from_object("django.conf:settings", namespace="CELERY")
 
-# Autodiscover tasks from logic/tasks/ — keeps tasks out of Django apps
-app.autodiscover_tasks(["logic.tasks"])
+# Autodiscover tasks from the logic/ package.
+# Pass "logic" (not "logic.tasks") — autodiscover appends ".tasks" to each
+# entry, so "logic.tasks" would look for logic.tasks.tasks (doesn't exist).
+# "logic" → imports logic.tasks → logic/tasks/__init__.py registers all modules.
+app.autodiscover_tasks(["logic"])
 ```
 
 ```python
