@@ -120,3 +120,5 @@ export function ThemeRegistry({ children }: ThemeRegistryProps): React.ReactElem
     </AppRouterCacheProvider>
   );
 }
+
+export default ThemeRegistry;

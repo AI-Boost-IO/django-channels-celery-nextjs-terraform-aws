@@ -21,7 +21,7 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.development")
 # Call get_asgi_application() before importing schema so django.setup() runs first.
 django_asgi_app = get_asgi_application()
 
-from graphql.schema import schema  # noqa: E402 — intentional late import
+from gql.schema import schema  # noqa: E402 — intentional late import
 
 application = GraphQLProtocolTypeRouter(
     schema,
@@ -47,8 +47,8 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.production")
 django_asgi_app = get_asgi_application()
 
 from strawberry.channels import GraphQLHTTPConsumer, GraphQLWSConsumer  # noqa: E402
-from graphql.schema import schema                                         # noqa: E402
-from graphql.cors_middleware import CorsMiddleware                        # noqa: E402
+from gql.schema import schema                                             # noqa: E402
+from gql.cors_middleware import CorsMiddleware                            # noqa: E402
 
 # Wrap the HTTP consumer in a CORS middleware so GraphQL mutations from Vercel
 # receive the correct Access-Control-Allow-Origin header.
@@ -228,7 +228,7 @@ def process_and_broadcast(self, example_id: str) -> None:
 Clients pass a JWT token in `connectionParams` at subscription time:
 
 ```typescript
-// ui/src/client/apollo-client.ts
+// ui/src/lib/apollo-client.ts
 const wsLink = new GraphQLWsLink(
   createClient({
     url: process.env.NEXT_PUBLIC_WS_URL!,
@@ -239,7 +239,7 @@ const wsLink = new GraphQLWsLink(
 );
 ```
 
-On the Django side, a middleware in `graphql/consumers.py` reads `connection_params["authorization"]`, validates the JWT, and attaches the user to the WebSocket scope so `info.context["request"].user` works identically to HTTP requests.
+On the Django side, a middleware in `gql/consumers.py` reads `connection_params["authorization"]`, validates the JWT, and attaches the user to the WebSocket scope so `info.context["request"].user` works identically to HTTP requests.
 
 ## Notes
 

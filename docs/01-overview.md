@@ -61,12 +61,13 @@ v1-mono/
 │   │   ├── authentication/
 │   │   └── <domain>/
 │   ├── logic/                  # Resolvers, tasks, email — imports from apps/, never the reverse
+│   │   ├── permissions.py      # IsAuthenticated and other BasePermission subclasses
 │   │   ├── queries/
 │   │   ├── mutations/
 │   │   ├── subscriptions/
 │   │   ├── tasks/
 │   │   └── email/
-│   ├── graphql/                # Schema assembly, consumers, CORS middleware
+│   ├── gql/                    # Schema types + consumers (schema.py, query.py, mutation.py, subscription.py, consumers.py)
 │   ├── base/                   # BaseModel, BaseType, shared abstractions
 │   └── utilities/              # S3 client, LLM client, email sender
 ├── ui/                         # Next.js frontend — TypeScript, Bun
@@ -77,7 +78,7 @@ v1-mono/
 │       │   ├── (app)/          # Authenticated product UI
 │       │   ├── (marketing)/    # Public pages
 │       │   └── api/emails/     # React Email rendering route handlers
-│       ├── client/             # Apollo client, Apollo providers
+│       ├── lib/                # Apollo client (apollo-client.ts, rsc-client.ts)
 │       ├── components/         # Shared React components
 │       ├── emails/             # React Email templates
 │       └── __generated__/      # Output of graphql-codegen (committed)
@@ -117,7 +118,7 @@ v1-mono/
 | **apps/ vs logic/** | `apps/` contains only models, admin, and migrations. All business logic, resolvers, and Celery tasks live in `logic/` — imports flow one-way (logic → apps, never apps → logic) |
 | **Formatting** | Python: Ruff (`uv run ruff format . && uv run ruff check --fix .`) configured in `api/pyproject.toml`. TypeScript: Biome (`bunx biome check --apply .`) configured in `ui/biome.json`. Both apply automatically on save via `.vscode/settings.json` |
 | **BaseModel** | Every domain model inherits `BaseModel`: UUID PK, `date_created`, `date_updated`, `date_deleted` (soft delete), `version` (optimistic concurrency) |
-| **Schema export** | `python manage.py export_schema` writes `api/graphql/schema.graphql`; `scripts/graphql-sync.sh` copies it to `ui/` so `graphql-codegen` can run against it without a live server |
+| **Schema export** | `python manage.py export_schema` writes `api/gql/schema.graphql`; `scripts/graphql-sync.sh` copies it to `ui/` so `graphql-codegen` can run against it without a live server |
 | **Codegen gate** | `tsc --noEmit` is blocked on codegen output — if the schema changes, types regenerate and compilation catches any frontend type errors |
 | **Periodic tasks** | Registered in the `PeriodicTask` DB table via a management command called from the beat entrypoint — not hardcoded in settings, so they survive DB resets and are visible in Django admin |
 | **Email cross-stack** | Celery task → Django POSTs to `ui/api/emails/<type>/route.ts` → React Email renders HTML → Django sends via Brevo (SendinBlue) |

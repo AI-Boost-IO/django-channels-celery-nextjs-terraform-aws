@@ -210,14 +210,22 @@ def process_example(self, example_id: str) -> dict:
 Tasks are dispatched asynchronously from Strawberry mutation resolvers using `.delay()`:
 
 ```python
-# logic/mutations/example.py
+# logic/mutations/example.py — plain resolver, no @strawberry.mutation decorator
 from logic.tasks.example import process_example
 
 
-@strawberry.mutation(permission_classes=[IsAuthenticated])
-async def trigger_processing(self, info: Info, example_id: strawberry.ID) -> str:
+async def trigger_processing(self: object, info: Info, example_id: strawberry.ID) -> str:
     # .delay() dispatches to the Celery worker queue immediately
     # The resolver returns without waiting for the task to complete
     task = process_example.delay(str(example_id))
     return task.id  # Return task ID so the client can poll or subscribe for completion
+
+
+# gql/mutation.py — permission_classes declared here, not on the resolver
+# @strawberry.type
+# class Mutation:
+#     trigger_processing: str = strawberry.mutation(
+#         resolver=trigger_processing,
+#         permission_classes=[IsAuthenticated],
+#     )
 ```

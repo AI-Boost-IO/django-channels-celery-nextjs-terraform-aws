@@ -44,7 +44,7 @@ Apollo Client 4 replaces the former `@apollo/experimental-nextjs-app-support` wi
 ### Split link setup
 
 ```typescript
-// ui/src/client/apollo-client.ts — see sample/frontend/lib/apollo-client.ts
+// ui/src/lib/apollo-client.ts — see sample/frontend/lib/apollo-client.ts
 ```
 
 The split link routes:
@@ -55,8 +55,8 @@ The split link routes:
 
 ```tsx
 // ui/src/app/layout.tsx
-import { ApolloWrapper } from "@/client/apollo-wrapper";
-import { ThemeRegistry } from "@/components/ThemeRegistry";
+import { ApolloWrapper } from "@/lib/apollo-client";
+import ThemeRegistry from "@/components/ThemeRegistry";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -81,7 +81,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
 ```tsx
 // ui/src/app/(app)/dashboard/page.tsx
-import { getClient } from "@/client/rsc-client";
+import { getClient } from "@/lib/rsc-client";
 import { GET_DASHBOARD_QUERY } from "@/__generated__/queries";
 
 export default async function DashboardPage() {
@@ -157,7 +157,7 @@ bunx biome format --write .     # Format only
 
 The VS Code Biome extension (`biomejs.biome`) reads `ui/biome.json` automatically when the workspace root contains the file, and applies format-on-save and inline lint diagnostics. Install it via `.vscode/extensions.json` recommendations.
 
-> **Note on `@biomejs/biome` dev dependency:** Install Biome locally with `bun add --dev --save-exact @biomejs/biome` so the VS Code extension uses the same version as CI. The `--save-exact` flag pins to a specific version, preventing unexpected formatting diffs when Biome releases a new minor version.
+> **Note on `@biomejs/biome` dev dependency:** Install Biome locally with `bun add --dev --save-exact @biomejs/biome@^2.0.0` so the VS Code extension uses the same version as CI. The `--save-exact` flag pins to a specific version, preventing unexpected formatting diffs when Biome releases a new minor version.
 
 ## GraphQL codegen workflow
 
@@ -172,7 +172,7 @@ Scripts (in package.json):
 
 Workflow:
   1. Edit Strawberry resolvers in api/logic/
-  2. python manage.py export_schema graphql.schema --path graphql/schema.graphql
+  2. python manage.py export_schema gql.schema --path gql/schema.graphql
   3. ./scripts/graphql-sync.sh   (copies schema.graphql to ui/src/)
   4. bun run codegen              (regenerates ui/src/__generated__/)
   5. bun run typecheck            (catches any type drift)

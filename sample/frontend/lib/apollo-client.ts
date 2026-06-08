@@ -1,11 +1,14 @@
 /**
- * Apollo Client 4 setup for Next.js 16 App Router.
+ * Apollo Client 4 setup for Next.js 16 App Router — client-side module.
  *
  * Uses @apollo/client-integration-nextjs (replaces @apollo/experimental-nextjs-app-support).
  *
- * Two client factories are exported:
- *   - makeClient()         → used by ApolloWrapper (Client Components, browser)
- *   - registerApolloClient → used by getClient() for RSC / Server Component queries
+ * This file is a 'use client' module. It exports:
+ *   - makeClient()    → factory used by ApolloWrapper and rsc-client.ts
+ *   - ApolloWrapper   → root Client Component provider for the App Router
+ *
+ * For React Server Component (RSC) queries, import from lib/rsc-client.ts instead:
+ *   import { getClient } from '@/lib/rsc-client';
  *
  * The link chain splits traffic by operation type:
  *   - subscription → GraphQLWsLink (WebSocket via graphql-ws)
@@ -31,10 +34,11 @@ import {
   InMemoryCache,
   split,
 } from '@apollo/client';
-import { registerApolloClient } from '@apollo/client-integration-nextjs';
+import { ApolloNextAppProvider } from '@apollo/client-integration-nextjs';
 import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
 import { getMainDefinition } from '@apollo/client/utilities';
 import { createClient } from 'graphql-ws';
+import React from 'react';
 
 // ---------------------------------------------------------------------------
 // Cookie helper — reads the JWT from an HttpOnly cookie set by Django
@@ -131,7 +135,7 @@ function makeSplitLink(httpLink: HttpLink): ApolloLink {
  *
  * Called once per:
  *   - Browser session (makeClient is called in ApolloWrapper on mount)
- *   - RSC request (registerApolloClient calls this per request)
+ *   - RSC request (registerApolloClient in rsc-client.ts calls this per request)
  *
  * InMemoryCache is configured with type policies to normalise UUID-keyed
  * objects correctly across paginated and subscription results.
@@ -151,25 +155,10 @@ export function makeClient(): ApolloClient<unknown> {
       },
     }),
     link,
-    // connectToDevTools is automatically disabled in production builds.
-    connectToDevTools: process.env.NODE_ENV === 'development',
+    // Apollo v4 devtools API — automatically inactive in production builds.
+    devtools: { enabled: process.env.NODE_ENV === 'development' },
   });
 }
-
-// ---------------------------------------------------------------------------
-// RSC client — for Server Component data fetching
-// ---------------------------------------------------------------------------
-
-/**
- * Register a per-request Apollo client for React Server Components.
- *
- * Usage in a Server Component:
- *   import { getClient } from '@/client/rsc-client';
- *   const { data } = await getClient().query({ query: MY_QUERY });
- *
- * Each RSC request gets its own cache — responses are not shared between users.
- */
-export const { getClient } = registerApolloClient(makeClient);
 
 // ---------------------------------------------------------------------------
 // ApolloWrapper — root Client Component provider
@@ -182,7 +171,13 @@ export const { getClient } = registerApolloClient(makeClient);
  * useQuery / useSuspenseQuery / useSubscription.
  *
  * Usage in app/layout.tsx:
- *   import { ApolloWrapper } from '@/client/apollo-client';
+ *   import { ApolloWrapper } from '@/lib/apollo-client';
  *   <ApolloWrapper>{children}</ApolloWrapper>
  */
-export { ApolloNextAppProvider as ApolloWrapper } from '@apollo/client-integration-nextjs';
+export function ApolloWrapper({ children }: { children: React.ReactNode }) {
+  return (
+    <ApolloNextAppProvider makeClient={makeClient}>
+      {children}
+    </ApolloNextAppProvider>
+  );
+}

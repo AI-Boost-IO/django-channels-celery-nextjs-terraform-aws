@@ -23,7 +23,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 # Core
 # ---------------------------------------------------------------------------
 
-SECRET_KEY = os.environ["SECRET_KEY"]
+SECRET_KEY = os.environ.get("SECRET_KEY", "insecure-dev-key-DO-NOT-USE-IN-PRODUCTION")
 
 DEBUG = False  # Each environment file sets this explicitly
 

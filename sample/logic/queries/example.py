@@ -5,10 +5,12 @@ Resolvers are plain async functions that return Django querysets or model instan
 DjangoOptimizerExtension (registered on the schema) handles N+1 optimisation
 automatically, so resolvers do not need manual prefetch_related() calls.
 
-Permission classes are applied per-field. The IsAuthenticated class is the minimum
-guard — add IsAdmin or role-specific classes for restricted resources.
+IMPORTANT — do NOT decorate these functions with @strawberry.field.
+Doing so turns them into StrawberryField objects; if you then pass them as
+resolver= in gql/query.py you get a double-wrapped field that crashes at startup.
+Permission classes are declared in gql/query.py, not here.
 
-These functions are imported by graphql/query.py and attached to the Query type.
+These functions are imported by gql/query.py and attached to the Query type.
 
 Replace 'myapp' and 'ExampleItem' with your app and model names.
 """
@@ -20,12 +22,10 @@ from strawberry.types import Info
 from strawberry_django.auth.utils import get_current_user
 
 from apps.myapp.models import ExampleItem
-from logic.permissions import IsAuthenticated
 from logic.types import ExampleItemType
 
 
-@strawberry.field(permission_classes=[IsAuthenticated])
-async def example_item(self, info: Info, id: strawberry.ID) -> ExampleItemType | None:
+async def example_item(self: object, info: Info, id: strawberry.ID) -> ExampleItemType | None:
     """
     Return a single ExampleItem by ID, or None if not found.
 
@@ -49,8 +49,7 @@ async def example_item(self, info: Info, id: strawberry.ID) -> ExampleItemType |
     return item  # type: ignore[return-value]  # strawberry maps queryset instances
 
 
-@strawberry.field(permission_classes=[IsAuthenticated])
-async def example_items(self, info: Info) -> list[ExampleItemType]:
+async def example_items(self: object, info: Info) -> list[ExampleItemType]:
     """
     Return all ExampleItems belonging to the authenticated user.
 

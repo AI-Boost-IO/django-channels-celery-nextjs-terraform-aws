@@ -2,13 +2,18 @@
 Example GraphQL mutation resolvers.
 
 Mutations follow this pattern:
-  1. Authenticate the request via permission_classes.
+  1. Authenticate the request via permission_classes (declared in gql/mutation.py).
   2. Validate input (Strawberry handles type coercion; add domain rules here).
   3. Mutate the database record.
   4. Dispatch a Celery task for async side-effects (email, broadcast, etc.).
   5. Return the updated type so the client can update its cache.
 
-These methods are collected into the Mutation type in graphql/mutation.py.
+IMPORTANT — do NOT decorate these functions with @strawberry.mutation.
+Doing so turns them into StrawberryField objects; if you then pass them as
+resolver= in gql/mutation.py you get a double-wrapped field that crashes at startup.
+Permission classes are declared in gql/mutation.py, not here.
+
+These functions are imported by gql/mutation.py and collected into the Mutation type.
 
 Replace 'myapp', 'ExampleItem', and task imports with your own.
 """
@@ -20,14 +25,12 @@ from strawberry.types import Info
 from strawberry_django.auth.utils import get_current_user
 
 from apps.myapp.models import ExampleItem
-from logic.permissions import IsAuthenticated
 from logic.tasks.example import process_and_broadcast
 from logic.types import ExampleItemInput, ExampleItemType, ExampleItemUpdateInput
 
 
-@strawberry.mutation(permission_classes=[IsAuthenticated])
 async def create_example_item(
-    self, info: Info, input: ExampleItemInput
+    self: object, info: Info, input: ExampleItemInput
 ) -> ExampleItemType:
     """
     Create a new ExampleItem owned by the authenticated user.
@@ -52,9 +55,8 @@ async def create_example_item(
     return item  # type: ignore[return-value]
 
 
-@strawberry.mutation(permission_classes=[IsAuthenticated])
 async def update_example_item(
-    self, info: Info, input: ExampleItemUpdateInput
+    self: object, info: Info, input: ExampleItemUpdateInput
 ) -> ExampleItemType:
     """
     Partially update an ExampleItem.
@@ -92,9 +94,8 @@ async def update_example_item(
     return item  # type: ignore[return-value]
 
 
-@strawberry.mutation(permission_classes=[IsAuthenticated])
 async def delete_example_item(
-    self, info: Info, id: strawberry.ID
+    self: object, info: Info, id: strawberry.ID
 ) -> bool:
     """
     Soft-delete an ExampleItem by setting date_deleted.

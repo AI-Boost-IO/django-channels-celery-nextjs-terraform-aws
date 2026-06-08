@@ -57,6 +57,11 @@ dev = [
 [tool.ruff]
 line-length = 88
 target-version = "py312"
+# Exclude auto-generated migration files from linting — they contain patterns
+# (e.g. raw SQL, long lines, unused imports) that Ruff would flag as errors.
+exclude = [
+    "**/migrations/**",
+]
 
 [tool.ruff.lint]
 select = [

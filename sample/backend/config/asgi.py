@@ -28,7 +28,7 @@ django_asgi_app = get_asgi_application()
 # WebSocket → GraphQLWSConsumer automatically.
 #
 # from strawberry.channels import GraphQLProtocolTypeRouter
-# from myproject.graphql.schema import schema
+# from myproject.gql.schema import schema
 #
 # application = GraphQLProtocolTypeRouter(
 #     schema,
@@ -47,8 +47,8 @@ from channels.routing import ProtocolTypeRouter, URLRouter  # noqa: E402
 from django.urls import re_path  # noqa: E402
 from strawberry.channels import GraphQLHTTPConsumer, GraphQLWSConsumer  # noqa: E402
 
-from myproject.graphql.cors_middleware import CorsMiddleware  # noqa: E402
-from myproject.graphql.schema import schema  # noqa: E402
+from myproject.gql.cors_middleware import CorsMiddleware  # noqa: E402
+from myproject.gql.schema import schema  # noqa: E402
 
 # Wrap the HTTP GraphQL consumer in CORS middleware so mutations from the
 # Vercel-deployed frontend receive the correct Access-Control-Allow-Origin header.

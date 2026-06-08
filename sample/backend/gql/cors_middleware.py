@@ -9,7 +9,7 @@ It reads CORS_ALLOWED_ORIGINS from Django settings so the same list of allowed
 origins governs both the standard Django views and the GraphQL consumer.
 
 Usage in config/asgi.py:
-    from graphql.cors_middleware import CorsMiddleware
+    from gql.cors_middleware import CorsMiddleware
     gql_http = CorsMiddleware(GraphQLHTTPConsumer.as_asgi(schema=schema))
 
 For pre-flight OPTIONS requests the middleware responds immediately with a 200

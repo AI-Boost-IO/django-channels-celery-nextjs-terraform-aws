@@ -23,16 +23,17 @@ Full-stack skeleton for Django + Strawberry GraphQL + Django Channels + Celery +
 | `sample/backend/config/settings/common.py` | Shared Django settings — INSTALLED_APPS, CHANNEL_LAYERS, CELERY_* |
 | `sample/backend/config/settings/production.py` | Production settings — secure cookies, whitenoise, CSRF for Vercel |
 | `sample/backend/base/model.py` | BaseModel with UUID PK, soft-delete, and optimistic versioning |
-| `sample/backend/graphql/schema.py` | Strawberry schema assembly — Query, Mutation, Subscription + extensions |
-| `sample/backend/graphql/consumers.py` | GraphQL HTTP and WebSocket consumers with JWT auth middleware |
-| `sample/backend/graphql/cors_middleware.py` | ASGI CORS wrapper for the GraphQL consumer |
+| `sample/backend/gql/schema.py` | Strawberry schema assembly — Query, Mutation, Subscription + extensions |
+| `sample/backend/gql/consumers.py` | GraphQL HTTP and WebSocket consumers with JWT auth middleware |
+| `sample/backend/gql/cors_middleware.py` | ASGI CORS wrapper for the GraphQL consumer |
 | `sample/logic/types.py` | Strawberry type backed by a Django model |
 | `sample/logic/queries/example.py` | Example query resolver with permission check |
 | `sample/logic/mutations/example.py` | Example mutation with input type |
 | `sample/logic/subscriptions/example.py` | Async generator subscription reading from channel layer |
 | `sample/logic/tasks/example.py` | Celery task with pub/sub + periodic task management command |
 | `sample/frontend/biome.json` | Biome v2 config — formatter (single quotes, 100-char lines), linter, import organiser |
-| `sample/frontend/lib/apollo-client.ts` | Apollo Client 4 with HTTP + WebSocket split link for Next.js 16 |
+| `sample/frontend/lib/apollo-client.ts` | Apollo Client 4 with HTTP + WebSocket split link, `ApolloWrapper` component for Next.js 16 |
+| `sample/frontend/lib/rsc-client.ts` | Per-request Apollo client for React Server Components (`getClient`) |
 | `sample/frontend/components/ThemeRegistry.tsx` | MUI v9 ThemeProvider wired for Next.js App Router SSR |
 | `sample/frontend/codegen.ts` | GraphQL codegen config pointing at the Django-exported schema |
 | `sample/infra/.vscode/settings.json` | VS Code format-on-save settings — Ruff for Python, Biome for TypeScript |
@@ -69,7 +70,7 @@ Full-stack skeleton for Django + Strawberry GraphQL + Django Channels + Celery +
    ```bash
    bun add @apollo/client @apollo/client-integration-nextjs graphql graphql-ws rxjs
    bun add @mui/material @mui/material-nextjs @emotion/react @emotion/styled
-   bun add --dev --save-exact @biomejs/biome
+   bun add --dev --save-exact @biomejs/biome@^2.0.0
    ```
    The last line installs Biome locally — required for the VS Code extension LSP and for `bunx biome` CI commands.
 

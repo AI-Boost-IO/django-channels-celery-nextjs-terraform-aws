@@ -32,7 +32,7 @@ api/
 │   ├── tasks/                      # @shared_task Celery functions
 │   ├── email/                      # Email dispatch helpers (HTTP call to Next.js route)
 │   └── types.py                    # All @strawberry_django.type definitions
-├── graphql/
+├── gql/
 │   ├── schema.py                   # Root Schema — wire Query + Mutation + Subscription
 │   ├── query.py                    # Root Query type aggregating logic/queries/
 │   ├── mutation.py                 # Root Mutation type aggregating logic/mutations/
@@ -105,10 +105,10 @@ AUTH_USER_MODEL = "authentication.User"
 
 ## Strawberry schema assembly
 
-Four files in `graphql/` assemble the schema; resolvers live in `logic/`.
+Four files in `gql/` assemble the schema; resolvers live in `logic/`.
 
 ```
-graphql/
+gql/
 ├── schema.py        # Root Schema — wires Query + Mutation + Subscription + extensions
 ├── query.py         # Root Query type — re-exports fields from logic/queries/
 ├── mutation.py      # Root Mutation type
@@ -116,7 +116,7 @@ graphql/
 └── schema.graphql   # Exported SDL — written by `manage.py export_schema`
 ```
 
-**`graphql/schema.py`**
+**`gql/schema.py`**
 ```python
 import strawberry
 from strawberry_django.optimizer import DjangoOptimizerExtension
@@ -136,15 +136,26 @@ schema = strawberry.Schema(
 )
 ```
 
-**`graphql/query.py`**
+**`gql/query.py`**
 ```python
 import strawberry
-from logic.queries.example import example_query
+from logic.permissions import IsAuthenticated
+from logic.queries.example import example_item, example_items
+from logic.types import ExampleItemType
 
 @strawberry.type
 class Query:
-    example: ExampleType = strawberry.field(resolver=example_query)
-    # Add more fields here as the schema grows
+    # Declare permission_classes here — NOT on the resolver function.
+    # Decorating the resolver with @strawberry.field and also passing it as
+    # resolver= below double-wraps the field and crashes at schema build time.
+    example_item: ExampleItemType | None = strawberry.field(
+        resolver=example_item,
+        permission_classes=[IsAuthenticated],
+    )
+    example_items: list[ExampleItemType] = strawberry.field(
+        resolver=example_items,
+        permission_classes=[IsAuthenticated],
+    )
 ```
 
 ## BaseModel
@@ -173,38 +184,45 @@ Soft-delete convention: never call `.delete()` — set `date_deleted = timezone.
 
 ## Permissions
 
-Permission classes live in `logic/permissions/` and compose on resolvers.
+Permission classes live in `logic/permissions.py` and inherit `BasePermission`.
 
 ```python
-# logic/permissions/permissions.py
-from strawberry_django.auth.utils import get_current_user
+# logic/permissions.py
+from strawberry.permission import BasePermission
+from strawberry.types import Info
 
-class IsAuthenticated:
-    """Rejects unauthenticated requests at the resolver level."""
-    message = "Authentication required."
+class IsAuthenticated(BasePermission):
+    """Deny access to unauthenticated users."""
+    message = "You must be logged in to access this resource."
 
-    async def has_permission(self, source, info, **kwargs) -> bool:
-        user = await get_current_user(info)
-        return user is not None and user.is_authenticated
+    async def has_permission(self, source: object, info: Info, **kwargs: object) -> bool:
+        request = info.context.get("request")
+        if request is None:
+            return False
+        return bool(request.user.is_authenticated)
 
 
-class IsAdmin:
-    """Restricts to users with the admin role."""
+class IsAdmin(BasePermission):
+    """Restrict to staff or admin users."""
     message = "Admin access required."
 
-    async def has_permission(self, source, info, **kwargs) -> bool:
-        user = await get_current_user(info)
-        if user is None or not user.is_authenticated:
+    async def has_permission(self, source: object, info: Info, **kwargs: object) -> bool:
+        request = info.context.get("request")
+        if request is None:
             return False
-        return await user.profile.arole == "admin"
+        return bool(request.user.is_authenticated and request.user.is_staff)
 ```
 
-Apply at the resolver with `permission_classes`:
+Apply `permission_classes` in the type declaration in `gql/query.py` or `gql/mutation.py` — **not** on the resolver function itself. Decorating a resolver with `@strawberry.field` and then passing it as `resolver=` double-wraps the field and raises a `TypeError` at schema build time.
 
 ```python
-@strawberry.field(permission_classes=[IsAuthenticated])
-async def my_query(self, info: Info) -> MyType:
-    ...
+# gql/query.py
+@strawberry.type
+class Query:
+    my_field: MyType | None = strawberry.field(
+        resolver=my_resolver,           # plain function, no @strawberry.field decorator
+        permission_classes=[IsAuthenticated],
+    )
 ```
 
 ## Formatting and linting
@@ -216,6 +234,8 @@ Ruff replaces Black, Flake8, and isort with a single Rust-based tool configured 
 [tool.ruff]
 line-length = 88
 target-version = "py312"
+# Django migration files are auto-generated and contain patterns Ruff would flag.
+exclude = ["**/migrations/**"]
 
 [tool.ruff.lint]
 select = [
@@ -249,7 +269,7 @@ After changing the schema, run the export and regenerate types:
 
 ```bash
 # In the api/ directory
-python manage.py export_schema graphql.schema --path graphql/schema.graphql
+python manage.py export_schema gql.schema --path gql/schema.graphql
 
 # Sync to the ui/ directory (run from monorepo root)
 ./scripts/graphql-sync.sh

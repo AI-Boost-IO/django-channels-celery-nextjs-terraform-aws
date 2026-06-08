@@ -4,7 +4,7 @@
  * Generates TypeScript types and typed operation hooks from the Django-exported
  * GraphQL schema. Run after any schema change:
  *
- *   1. python manage.py export_schema graphql.schema --path api/graphql/schema.graphql
+ *   1. python manage.py export_schema gql.schema --path api/gql/schema.graphql
  *   2. ./scripts/graphql-sync.sh      (copies schema.graphql to ui/src/)
  *   3. bun run codegen                (runs this config)
  *   4. bun run typecheck              (tsc --noEmit — validates generated types)
@@ -25,7 +25,7 @@ import type { CodegenConfig } from '@graphql-codegen/cli';
 const config: CodegenConfig = {
   // Schema location: synced from the Django export by graphql-sync.sh.
   // Using a local SDL file means codegen never needs a running API server.
-  schema: './src/graphql/schema.graphql',
+  schema: './src/schema.graphql',
 
   // Scan all component and page files for gql`` tagged template literals.
   documents: ['src/**/*.tsx', 'src/**/*.ts', '!src/__generated__/**'],
@@ -65,10 +65,6 @@ const config: CodegenConfig = {
 
   // Suppress codegen output noise in CI — set to false for verbose local runs.
   silent: false,
-
-  hooks: {
-    afterAllFileWrite: ['prettier --write'],
-  },
 };
 
 export default config;

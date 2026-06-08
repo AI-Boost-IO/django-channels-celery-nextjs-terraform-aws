@@ -21,7 +21,7 @@ SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPTS_DIR}/.." && pwd)"
 API_DIR="${REPO_ROOT}/api"
 UI_DIR="${REPO_ROOT}/ui"
-SCHEMA_SRC="${API_DIR}/graphql/schema.graphql"
+SCHEMA_SRC="${API_DIR}/gql/schema.graphql"
 SCHEMA_DST="${UI_DIR}/src/schema.graphql"
 
 # ---------------------------------------------------------------------------
@@ -38,7 +38,7 @@ fi
 cd "${API_DIR}"
 
 # uv run ensures the correct .venv is used regardless of the active virtualenv
-uv run python manage.py export_schema graphql.schema --path graphql/schema.graphql
+uv run python manage.py export_schema gql.schema --path gql/schema.graphql
 
 echo "[graphql-sync] Schema written to ${SCHEMA_SRC}"
 
