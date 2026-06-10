@@ -31,6 +31,7 @@ Full-stack skeleton for Django + Strawberry GraphQL + Django Channels + Celery +
 | `sample/logic/mutations/example.py` | Example mutation with input type |
 | `sample/logic/subscriptions/example.py` | Async generator subscription reading from channel layer |
 | `sample/logic/tasks/example.py` | Celery task with pub/sub + periodic task management command |
+| `sample/frontend/next.config.ts` | Next.js 16 config — Turbopack is the default bundler; top-level `turbopack` block for custom rules/aliases |
 | `sample/frontend/biome.json` | Biome v2 config — formatter (single quotes, 100-char lines), linter, import organiser |
 | `sample/frontend/lib/apollo-client.ts` | Apollo Client 4 with HTTP + WebSocket split link, `ApolloWrapper` component for Next.js 16 |
 | `sample/frontend/lib/rsc-client.ts` | Per-request Apollo client for React Server Components (`getClient`) |
@@ -73,6 +74,8 @@ Full-stack skeleton for Django + Strawberry GraphQL + Django Channels + Celery +
    bun add --dev --save-exact @biomejs/biome@^2.0.0
    ```
    The last line installs Biome locally — required for the VS Code extension LSP and for `bunx biome` CI commands.
+
+   Copy `sample/frontend/next.config.ts` to `ui/next.config.ts`. Turbopack is the default bundler in Next.js 16 — no flags are needed. The `turbopack` block in the config is pre-populated with commented-out examples for custom loader rules and resolve aliases; remove entries you don't need.
 
 6. **Set up VS Code formatting.** Copy `sample/infra/.vscode/` to `.vscode/` in your monorepo root, then open the project in VS Code. You will be prompted to install the recommended extensions (`charliermarsh.ruff` and `biomejs.biome`). Format-on-save activates immediately after installation.
 

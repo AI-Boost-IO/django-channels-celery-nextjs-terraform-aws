@@ -1,5 +1,45 @@
 # 05 — Frontend: Next.js 16 + Apollo Client 4 + MUI v9
 
+## Turbopack (default bundler)
+
+Next.js 16 makes Turbopack the stable, default bundler for **both** `next dev` and `next build`. No flags or opt-in configuration are required — Turbopack is active out of the box.
+
+### next.config.ts
+
+The project ships a `next.config.ts` sample at `sample/frontend/next.config.ts`. Copy it to `ui/next.config.ts`. The file is intentionally minimal — the `turbopack` block only needs to exist when you require custom loader rules or resolve aliases. If you have neither, the entire block can be removed:
+
+```typescript
+// ui/next.config.ts — see sample/frontend/next.config.ts
+import type { NextConfig } from 'next';
+
+const nextConfig: NextConfig = {
+  turbopack: {
+    // Resolve aliases — equivalent to webpack resolve.alias
+    resolveAlias: {
+      // '@ui': './packages/ui/src',
+    },
+    // Custom loader rules — equivalent to webpack module.rules
+    rules: {
+      // '*.svg': { loaders: ['@svgr/webpack'], as: '*.js' },
+    },
+  },
+};
+
+export default nextConfig;
+```
+
+### Migration note from Next.js 15
+
+| Next.js 15 | Next.js 16 |
+|------------|------------|
+| `next dev --turbopack` (opt-in flag) | `next dev` (default, no flag) |
+| `experimental.turbopack` in config | `turbopack` at top level of config |
+| Webpack still supported for builds | Webpack support removed — stay on 15 if you need it |
+
+### Opting out
+
+Turbopack is the only supported bundler in Next.js 16. If a missing loader or plugin blocks you from migrating, stay on Next.js 15 (which receives security patches) until support is added.
+
 ## Deployment
 
 The frontend is **deployed to Vercel** via git integration — not part of Docker Compose. A push to `main` triggers Vercel's build pipeline automatically. No GitHub Actions workflow step is needed for the frontend.
